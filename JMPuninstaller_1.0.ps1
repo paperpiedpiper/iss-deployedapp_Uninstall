@@ -45,8 +45,8 @@ foreach ($dirItem in $issDirItems) {
 		foreach ($subkey in $subkeys) {
 			
 			$keyLeafname = (Split-Path $subkey -Leaf).ToUpper()
-			$helplinkValue = Get-ChildItem "HKLM:\SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall" | Select-Object -Last 1 | Get-ItemProperty -Name "HelpLink"
-			If ( ($keyLeafname -eq $TargetGUID) -and ($helplinkValue -like '*jmp.com*')) {
+			$displayName = Get-ItemPropertyValue -Path $subkey.PSPath -Name "DisplayName"
+			If ( ($keyLeafname -eq $TargetGUID) -and ($displayName -like '*jmp.com*')) {
 				$GUID_list += $dirItem.name
 			}
 		}
