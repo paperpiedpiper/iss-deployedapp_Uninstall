@@ -1,39 +1,27 @@
-Function Get-OSArchitecture
+#PcP#
+
+$PSPath = Split-Path -Parent $MyInvocation.MyCommand.Definition
+$SourcesPath = Join-Path $PSPath "Sources"
+
+# import PMIDeployer module
+If (-not (Get-Module -Name PMIDeployer))
 {
-	$OS = Get-WmiObject -Class Win32_OperatingSystem
-	$Version = [Version]$OS.Version
-	
-	If($Version -ge [Version]"6.1")
-	{
-		If($OS.OSArchitecture -like "*64*"){ return "64-bit"}
-		ElseIf ($OS.OSArchitecture -like "*32*"){ return "32-bit"}
-		Else{ return $OS.OSArchitecture}
-	}
-	Else
-	{
-		If(${ENV:ProgramFiles(x86)})
-		{
-			return "64-bit"
-		}
-		Else
-		{
-			return "32-bit"
-		}
-	}
+	$PMIModuleFilePath = Join-Path "$PSPath\Modules" "PMIDeployer.psm1"
+	Import-Module $PMIModuleFilePath -ErrorAction Stop
+	$PMIModulePURDS = Join-Path "$PSPath\Modules" "PURDS.psm1"
+   	Import-Module $PMIModulePURDS -ErrorAction Stop
 }
 
 # ===============================================================================
-$logPath = "${env:SystemRoot}\@MYPCMGT\LOGS"
 $GUID_list = @()
 $uninstalledGUID_list = @()
 
 
-# ===============================================================================
 $issDirItems = Get-ChildItem "C:\Program Files (x86)\InstallShield Installation Information"
 
 foreach ($dirItem in $issDirItems) {
 
-	$TargetGUID = $dirItem.name.ToUpper()
+	$TargetGUID = ($dirItem.name).ToUpper()
 	$paths = @(
 		"HKLM:\SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall",
 		"HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall"
@@ -45,8 +33,8 @@ foreach ($dirItem in $issDirItems) {
 		foreach ($subkey in $subkeys) {
 			
 			$keyLeafname = (Split-Path $subkey -Leaf).ToUpper()
-			$displayName = Get-ItemPropertyValue -Path $subkey.PSPath -Name "DisplayName"
-			If ( ($keyLeafname -eq $TargetGUID) -and ($displayName -like '*jmp.com*')) {
+			$displayName = $subkey | Get-ItemProperty -Name "DisplayName" -ErrorAction SilentlyContinue
+			If ( ($keyLeafname -eq $TargetGUID) -and ($displayName) -and ($displayName.DisplayName -like '*JMP*') ) {
 				$GUID_list += $dirItem.name
 			}
 		}
@@ -101,7 +89,8 @@ bOpt2=0
 
 }
 
-If (!Test-Path $logPath) {
+$logPath = "${env:SystemRoot}\@MYPCMGT\LOGS"
+If ( !(Test-Path $logPath) ) {
 	New-Item $logPath -ItemType Directory
 }
 $uninstalledGUID_list | Set-Content "$logPath\JMPUNINSTALLER.log"
